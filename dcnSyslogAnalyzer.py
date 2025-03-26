@@ -1,4 +1,4 @@
-# Version 1.2.5 (20250311)
+# Version 1.2.6 (20250326)
 import os
 import re
 import csv
@@ -23,28 +23,36 @@ def extract_log_type(message):
 
 def load_device_list():
     """
-    讀取 deviceList.csv 檔案，預期每行格式為 "Type,Hostname,IP"，
+    讀取符合 deviceList_v*.csv 檔案，預期每行格式為 "Type,Hostname,IP"，
     建立並回傳兩個映射字典：
       mapping_tfn: { IP: Hostname } (TFN 類)
       mapping_twm: { IP: Hostname } (TWM 類)
-    若檔案不存在，回傳兩個空字典。
+    若找不到符合的檔案，則回傳兩個空字典。
     """
     mapping_tfn = {}
     mapping_twm = {}
-    device_file = "deviceList_v*.csv"
-    if os.path.exists(device_file):
-        with open(device_file, "r", encoding="utf-8") as f:
-            reader = csv.reader(f)
-            for row in reader:
-                if len(row) < 3:
-                    continue
-                dev_type = row[0].strip().upper()
-                hostname = row[1].strip()
-                ip = row[2].strip()
-                if dev_type == "TFN":
-                    mapping_tfn[ip] = hostname
-                elif dev_type == "TWM":
-                    mapping_twm[ip] = hostname
+
+    # 利用 glob 萬用字元取得符合的檔案清單
+    device_files = glob.glob("deviceList_v*.csv")
+    if not device_files:
+        return mapping_tfn, mapping_twm
+
+    # 手動控制只留一個版本，所以取第一個即可
+    device_file = device_files[0]
+
+    with open(device_file, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if len(row) < 3:
+                continue
+            dev_type = row[0].strip().upper()
+            hostname = row[1].strip()
+            ip = row[2].strip()
+            if dev_type == "TFN":
+                mapping_tfn[ip] = hostname
+            elif dev_type == "TWM":
+                mapping_twm[ip] = hostname
+
     return mapping_tfn, mapping_twm
 
 def output_severity_count(out_folder, month_suffix, severity_counts):
